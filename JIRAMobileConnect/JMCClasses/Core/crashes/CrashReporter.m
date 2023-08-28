@@ -27,35 +27,18 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-
 #import <CrashReporter/CrashReporter.h>
-
 #import "CrashReporter.h"
 #import "JMC.h"
 #import "JMCMacros.h"
 #import "sys/sysctl.h"
 
-
-#ifndef CPU_SUBTYPE_ARM_V7S
-# define CPU_SUBTYPE_ARM_V7S 11
-#endif
-
-#ifndef CPU_TYPE_ARM64
-#define CPU_TYPE_ARM64 (CPU_TYPE_ARM | CPU_ARCH_ABI64)
-#endif
-
-#ifndef CPU_SUBTYPE_ARM_V8
-# define CPU_SUBTYPE_ARM_V8 13
-#endif
-
-
 static CrashReporter *crashReportSender = nil;
 
 @interface CrashReporter ()
 
-@property (nonatomic, strong) PLCrashReporter *crashReporter;
-
 - (void)handleCrashReport;
+
 - (NSString *)_crashLogStringForReport:(PLCrashReport *)report;
 
 @end
@@ -94,7 +77,7 @@ static CrashReporter *crashReportSender = nil;
             _crashReportAnalyzerStarted = 0;
         } else
         {
-            _crashReportAnalyzerStarted = (int)[[NSUserDefaults standardUserDefaults] integerForKey:kCrashReportAnalyzerStarted];
+            _crashReportAnalyzerStarted = [[NSUserDefaults standardUserDefaults] integerForKey:kCrashReportAnalyzerStarted];
         }
 
         testValue = nil;
@@ -124,15 +107,15 @@ static CrashReporter *crashReportSender = nil;
                 [fm createDirectoryAtPath:_crashesDir withIntermediateDirectories:YES attributes:attributes error:&theError];
             }
 
-            self.crashReporter = [[PLCrashReporter alloc] initWithConfiguration:[PLCrashReporterConfig defaultConfiguration]];
+            PLCrashReporter *crashReporter = [PLCrashReporter sharedReporter];
             NSError *error;
 
             // Check if we previously crashed
-            if ([self.crashReporter hasPendingCrashReport])
+            if ([crashReporter hasPendingCrashReport])
                     [self handleCrashReport];
 
             // Enable the Crash Reporter
-            if (![self.crashReporter enableCrashReporterAndReturnError:&error])
+            if (![crashReporter enableCrashReporterAndReturnError:&error])
                 JMCALog(@"Warning: Could not enable crash reporter: %@", error);
 
             JMCDLog(@"Crash reporter enabled.");
@@ -248,7 +231,7 @@ static CrashReporter *crashReportSender = nil;
     NSMutableString *reportString = [NSMutableString string];
 
     /* Header */
-    boolean_t lp64 = true;
+    boolean_t lp64;
 
     /* Map to apple style OS nane */
     const char *osName;
@@ -266,77 +249,30 @@ static CrashReporter *crashReportSender = nil;
     }
 
     /* Map to Apple-style code type */
-    NSString *codeType = nil;
-    
-    /* Code type from binary images */
-    for (PLCrashReportBinaryImageInfo *image in report.images) {
-        if (image.codeType == nil)
-            continue;
-        
-        if (image.codeType.typeEncoding != PLCrashReportProcessorTypeEncodingMach)
-            continue;
-        
-        switch (image.codeType.type) {
-            case CPU_TYPE_ARM:
-                codeType = @"ARM";
-                lp64 = false;
-                break;
-                
-            case CPU_TYPE_ARM64:
-                codeType = @"ARM-64";
-                lp64 = true;
-                break;
-                
-            case CPU_TYPE_X86:
-                codeType = @"X86";
-                lp64 = false;
-                break;
-                
-            case CPU_TYPE_X86_64:
-                codeType = @"X86-64";
-                lp64 = true;
-                break;
-                
-            case CPU_TYPE_POWERPC:
-                codeType = @"PPC";
-                lp64 = false;
-                break;
-                
-            default:
-                break;
-        }
-
-        if (codeType != nil)
+    NSString *codeType;
+    switch (report.systemInfo.architecture)
+    {
+        case PLCrashReportArchitectureARM:
+            codeType = @"ARM (Native)";
+            lp64 = false;
+            break;
+        case PLCrashReportArchitectureX86_32:
+            codeType = @"X86";
+            lp64 = false;
+            break;
+        case PLCrashReportArchitectureX86_64:
+            codeType = @"X86-64";
+            lp64 = true;
+            break;
+        case PLCrashReportArchitecturePPC:
+            codeType = @"PPC";
+            lp64 = false;
+            break;
+        default:
+            codeType = @"ARM (Native)";
+            lp64 = false;
             break;
     }
-    
-    /* If unsuccessful use architecture value. */
-    if (codeType == nil) {
-        switch (report.systemInfo.processorInfo.type) {
-            case PLCrashReportArchitectureARMv6:
-            case PLCrashReportArchitectureARMv7:
-                codeType = @"ARM";
-                lp64 = false;
-                break;
-            case PLCrashReportArchitectureX86_32:
-                codeType = @"X86";
-                lp64 = false;
-                break;
-            case PLCrashReportArchitectureX86_64:
-                codeType = @"X86-64";
-                lp64 = true;
-                break;
-            case PLCrashReportArchitecturePPC:
-                codeType = @"PPC";
-                lp64 = false;
-                break;
-            default:
-                codeType = [NSString stringWithFormat: @"Unknown (%llu)", report.systemInfo.processorInfo.type];
-                lp64 = true;
-                break;
-        }
-    }    
-
 
     /* Application and process info */
     {
@@ -551,10 +487,11 @@ NSString * _callStackString(NSArray * callStack, PLCrashReport * report)
 //
 - (void)handleCrashReport
 {
+    PLCrashReporter *crashReporter = [PLCrashReporter sharedReporter];
     NSError *error;
 
     // Try loading the crash report
-    NSData *crashData = [NSData dataWithData:[self.crashReporter loadPendingCrashReportDataAndReturnError:&error]];
+    NSData *crashData = [NSData dataWithData:[crashReporter loadPendingCrashReportDataAndReturnError:&error]];
 
     NSString *cacheFilename = [NSString stringWithFormat:@"%.0f", [NSDate timeIntervalSinceReferenceDate]];
 
@@ -590,7 +527,7 @@ NSString * _callStackString(NSArray * callStack, PLCrashReport * report)
             _crashReportAnalyzerStarted = 0;
     [[NSUserDefaults standardUserDefaults] setValue:[NSNumber numberWithInt:_crashReportAnalyzerStarted] forKey:kCrashReportAnalyzerStarted];
 
-    [self.crashReporter purgePendingCrashReport];
+    [crashReporter purgePendingCrashReport];
     return;
 }
 

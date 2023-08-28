@@ -20,7 +20,7 @@
 // flags if the crashreporter should automatically send crashes without asking the user again
 #define kAutomaticallySendCrashReports @"AutomaticallySendCrashReports"
 
-@interface JMCCrashSender : NSObject {
+@interface JMCCrashSender : NSObject <UIAlertViewDelegate> {
 
 }
 

@@ -20,7 +20,7 @@
 //
 
 
-@import UIKit;
+#import <Foundation/Foundation.h>
 
 @class JMCComment;
 

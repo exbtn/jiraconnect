@@ -21,9 +21,6 @@
 #import "JMCRequestQueue.h"
 #import "JMCIssuesViewController.h"
 #include <sys/xattr.h>
-#import "NSBundle+JMC.h"
-#import "UIImage+JMC.h"
-#import "CrashReporter.h"
 
 @implementation JMCOptions
 @synthesize url=_url, projectKey=_projectKey, apiKey=_apiKey,
@@ -205,12 +202,9 @@ static JMCViewController* _jcViewController;
         NSString *uuid = nil;
         CFUUIDRef theUUID = CFUUIDCreate(kCFAllocatorDefault);
         if (theUUID) {
-           CFStringRef string = CFUUIDCreateString(NULL, theUUID);
-           CFRelease(theUUID);
-           uuid = (__bridge_transfer NSString *)string;
-           if (uuid) {
-              [[NSUserDefaults standardUserDefaults] setObject:uuid forKey:kJIRAConnectUUID];
-           }
+            uuid = (NSString*) CFBridgingRelease(CFUUIDCreateString(kCFAllocatorDefault, theUUID));
+            CFRelease(theUUID);
+            [[NSUserDefaults standardUserDefaults] setObject:uuid forKey:kJIRAConnectUUID];
         }
     }
 }
@@ -278,9 +272,7 @@ static JMCViewController* _jcViewController;
 -(void) start 
 {
     if ([self crashReportingIsEnabled]) {
-        if (!self._crashSender) {
-          self._crashSender = [[JMCCrashSender alloc] init];
-        }
+        self._crashSender = [[JMCCrashSender alloc] init];
         [CrashReporter enableCrashReporter];
         // TODO: firing this when network becomes active could be better
         [NSTimer scheduledTimerWithTimeInterval:3
@@ -294,14 +286,12 @@ static JMCViewController* _jcViewController;
 
     if (self.options.notificationsEnabled) {
 
-        if (_pinger) {
-            [[NSNotificationCenter defaultCenter] removeObserver:_pinger]; // in case app was already configured, don't add a second observer.
-        }
         self._pinger = [[JMCPing alloc] init];
         JMCNotifier* notifier = [[JMCNotifier alloc] initWithStartFrame:[self notifierStartFrame]
                                                                endFrame:[self notifierEndFrame]];
         self._notifier = notifier;
         // whenever the Application Becomes Active, ping for notifications from JIRA.
+        [[NSNotificationCenter defaultCenter] removeObserver:_pinger]; // in case app was already configured, don't add a second observer.
         [[NSNotificationCenter defaultCenter] addObserver:_pinger
                                                  selector:@selector(start)
                                                      name:UIApplicationDidBecomeActiveNotification
@@ -328,7 +318,7 @@ static JMCViewController* _jcViewController;
 
 -(JMCViewController*)createJMCViewController
 {
-    return [[JMCViewController alloc] initWithNibName:@"JMCViewController" bundle:[NSBundle jmc_bundle]];
+    return [[JMCViewController alloc] initWithNibName:@"JMCViewController" bundle:nil];
 }
 
 - (JMCViewController *)_jcController {
@@ -400,7 +390,7 @@ static JMCViewController* _jcViewController;
 }
 
 -(UIImage*) feedbackIcon {
-    return [UIImage jmc_imageNamed:@"megaphone.png"];
+    return [UIImage imageNamed:@"megaphone.png"];
 }
 
 - (NSDictionary *)getMetaData
@@ -524,7 +514,7 @@ static JMCViewController* _jcViewController;
     if ([_customDataSource respondsToSelector:@selector(notifierStartFrame)]) {
         return [_customDataSource notifierStartFrame];
     }
-    CGSize screenSize = [[UIScreen mainScreen] bounds].size;
+    CGSize screenSize = [[UIScreen mainScreen] applicationFrame].size;
     return CGRectMake(0, screenSize.height + 40, screenSize.width, 40);
 }
 
@@ -533,7 +523,7 @@ static JMCViewController* _jcViewController;
     if ([_customDataSource respondsToSelector:@selector(notifierEndFrame)]) {
         return [_customDataSource notifierEndFrame];
     }
-    CGSize screenSize = [[UIScreen mainScreen] bounds].size;
+    CGSize screenSize = [[UIScreen mainScreen] applicationFrame].size;
     return CGRectMake(0, screenSize.height - 20, screenSize.width, 40);
 }
 

@@ -16,7 +16,6 @@
 #import "JMCNotifier.h"
 #import "JMCIssueStore.h"
 #import "JMC.h"
-#import "JMCLocalization.h"
 
 @implementation JMCNotifier
 
@@ -41,9 +40,13 @@ static CGRect endFrame;
         _label = [[UILabel alloc] initWithFrame:CGRectMake(0, 10, endFrame.size.width, 20)];
         _label.backgroundColor = [UIColor clearColor];
 #ifdef __IPHONE_6_0
-        _label.textAlignment = NSTextAlignmentCenter;
-#else
-        _label.textAlignment = UITextAlignmentCenter;
+        if (NSTextAlignmentFromCTTextAlignment != NULL) {
+            _label.textAlignment = NSTextAlignmentCenter;
+        } else {
+#endif
+            _label.textAlignment = UITextAlignmentCenter;
+#ifdef __IPHONE_6_0
+        }
 #endif
         _label.textColor = [UIColor whiteColor];
         [_toolbar addSubview:_label];
@@ -129,7 +132,7 @@ static CGRect endFrame;
 - (void)displayNotifications:(id)sender {
     
     CGRect statusBarFrame = [UIApplication sharedApplication].statusBarFrame;
-    CGSize frameSize = [[UIScreen mainScreen] bounds].size;
+    CGSize frameSize = [[UIScreen mainScreen] applicationFrame].size;
     CGRect currStartFrame = CGRectMake(startFrame.origin.x, startFrame.origin.y, frameSize.width, frameSize.height);
     CGRect currEndFrame = CGRectMake(0, 0 + statusBarFrame.size.height, frameSize.width, frameSize.height);
 
@@ -156,7 +159,7 @@ static CGRect endFrame;
 }
 
 - (void)dealloc {
-    [[NSNotificationCenter defaultCenter] removeObserver:self];
+
     
     _viewController = nil;
     _label = nil;

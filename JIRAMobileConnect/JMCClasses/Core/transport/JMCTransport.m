@@ -20,10 +20,6 @@
 #import "JMCQueueItem.h"
 #import "JMCRequestQueue.h"
 #import "JMCTransportOperation.h"
-#import "JMCLocalization.h"
-#import "JMCLocalization.h"
-#import "UIApplication+JMC.h"
-#import "UIAlertAction+JMC.h"
 
 @implementation JMCTransport
 
@@ -114,7 +110,7 @@
         if (item != nil && item.filenameFormat != nil) {
             
             NSString *filename = [NSString stringWithFormat:item.filenameFormat, attachmentIndex];
-            NSString *key = [item.name stringByAppendingFormat:@"-%ld", (long)attachmentIndex];
+            NSString *key = [item.name stringByAppendingFormat:@"-%d", attachmentIndex];    
             if (item.type == JMCAttachmentTypeCustom ||
                 item.type == JMCAttachmentTypeSystem) {
                 // the JIRA Plugin expects all customfields to be in the 'customfields' part.
@@ -213,22 +209,20 @@
     return operation;
 }
 
--(void)sayThankYouFromViewController:(UIViewController *)viewController
+-(void)sayThankYou 
 {
     NSString *thankyouMsg = JMCLocalizedString(@"JMCFeedbackReceived", @"Thank you message on feedback submission");
     NSString *appName = [[JMC sharedInstance] getAppName];
     NSString *projectName = appName ? appName : [[JMC sharedInstance] getProject];
     NSString *msg = [NSString stringWithFormat:thankyouMsg, projectName];
-    [self presentThankYouAlertWithMessage:msg fromViewController:viewController];
-}
 
-- (void)presentThankYouAlertWithMessage:(NSString *)message fromViewController:(UIViewController *)viewController {
-    NSString *title = JMCLocalizedString(@"Thank You", @"Thank you title on feedback submission");
-    UIAlertController *thankYouAlert = [UIAlertController alertControllerWithTitle:title
-                                                                           message:message
-                                                                    preferredStyle:UIAlertControllerStyleAlert];
-    [thankYouAlert addAction:[UIAlertAction jmc_okAction]];
-    [viewController presentViewController:thankYouAlert animated:YES completion:nil];
+    NSString *thankyouTitle = JMCLocalizedString(@"Thank You", @"Thank you title on feedback submission");
+    UIAlertView *alertView2 = [[UIAlertView alloc] initWithTitle:thankyouTitle
+                                                         message:msg
+                                                        delegate:self
+                                               cancelButtonTitle:@"Ok"
+                                               otherButtonTitles:nil];
+    [alertView2 show];
 }
 
 - (JMCQueueItem *)qeueItemWith:(NSString *)description
@@ -242,7 +236,7 @@
     [params setObject:description forKey:@"description"];
     [params addEntriesFromDictionary:[[JMC sharedInstance] getMetaData]];
 
-    NSString *issueJSON = [[NSString alloc] initWithData:[NSJSONSerialization dataWithJSONObject:params options:0 error:nil] encoding:NSUTF8StringEncoding];
+    NSString *issueJSON = [[NSString alloc] initWithData:[NSJSONSerialization dataWithJSONObject:params options:nil error:nil] encoding:NSUTF8StringEncoding];
     NSData *jsonData = [issueJSON dataUsingEncoding:NSUTF8StringEncoding];
     JMCAttachmentItem *issueItem = [[JMCAttachmentItem alloc] initWithName:@"issue"
                                                                       data:jsonData
@@ -275,17 +269,37 @@
 @synthesize delegate = _delegate;
 
 
+
++ (CFStringRef)newEncodedValue:(CFStringRef)value {
+    return CFURLCreateStringByAddingPercentEscapes(kCFAllocatorDefault,
+            value,
+            NULL,
+            (CFStringRef) @";/?:@&=+$,",
+            kCFStringEncodingUTF8);
+}
+
+
 + (NSMutableString *)encodeParameters:(NSDictionary *)parameters {
-  
-    NSMutableArray *queryParameters = [@[] mutableCopy];
-    for (id key in parameters) {
-        NSURLQueryItem *queryItem = [NSURLQueryItem queryItemWithName:key value:parameters[key]];
-        [queryParameters addObject:queryItem];
+    NSMutableString *params = nil;
+    if (parameters != nil) {
+        params = [[NSMutableString alloc] init];
+        for (id key in parameters) {
+            NSString *encodedKey = [key stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
+            CFStringRef value = (CFStringRef) CFBridgingRetain([[parameters objectForKey:key] copy]);
+
+            // Escape even the "reserved" characters for URLs
+            // as defined in http://www.ietf.org/rfc/rfc2396.txt
+            CFStringRef encodedValue = [self newEncodedValue:value];
+
+            [params appendFormat:@"%@=%@&", encodedKey, encodedValue];
+
+            CFRelease(value);
+            CFRelease(encodedValue);
+        }
+        [params deleteCharactersInRange:NSMakeRange([params length] - 1, 1)];
     }
-    NSURLComponents *URLComponents = [[NSURLComponents alloc] init];
-    URLComponents.queryItems = queryParameters;
-    return [URLComponents.percentEncodedQuery mutableCopy];
-    
+    return params;
+
 }
 
 

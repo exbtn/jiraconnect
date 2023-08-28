@@ -14,7 +14,7 @@
    limitations under the License.
 **/
 
-@import UIKit;
+#import <Foundation/Foundation.h>
 
 @interface JMCLine : NSObject {
 	NSMutableArray *points;

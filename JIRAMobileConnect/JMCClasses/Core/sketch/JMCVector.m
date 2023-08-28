@@ -6,10 +6,8 @@
 //  Copyright (c) 2012 Nick Pellow. All rights reserved.
 //
 
-@import UIKit;
-@import CoreGraphics;
-
 #import "JMCVector.h"
+#import <QuartzCore/QuartzCore.h>
 #import <math.h>
 
 @implementation JMCVector
@@ -28,6 +26,8 @@
 
 - (void)drawWithContext:(CGContextRef)context
 {
+    [self visitPoints];
+    
     [self findArrowHeadPoints];
     [self findArrowBodyPoints];
     
@@ -54,6 +54,18 @@
 - (void)addPoint:(CGPoint)point
 {
     [points addObject:[NSValue valueWithCGPoint:point]];
+}
+
+- (void)visitPoints
+{
+    for (JMCVector *vector in points) {
+        firstValue = [points objectAtIndex:0];
+        firstPoint = [firstValue CGPointValue];
+        
+        int i = [points count];
+        lastValue = [points objectAtIndex:i - 1];
+        lastPoint = [lastValue CGPointValue];
+    }
 }
 
 - (void)extendPoint

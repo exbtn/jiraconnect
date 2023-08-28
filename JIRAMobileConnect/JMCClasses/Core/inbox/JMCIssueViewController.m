@@ -20,7 +20,6 @@
 #import "JMCMessageBubble.h"
 #import "JMCIssueStore.h"
 #import "JMC.h"
-#import "NSBundle+JMC.h"
 
 @interface JMCIssueViewController ()
 @property (nonatomic, strong) UIFont *titleFont;
@@ -66,7 +65,7 @@
 - (void)viewDidLoad
 {
     [super viewDidLoad];
-    self.tableView.backgroundColor = [UIColor whiteColor];
+    self.tableView.backgroundColor = [UIColor groupTableViewBackgroundColor];
     self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
     self.tableView.separatorColor = [UIColor clearColor];
     [self scrollToLastComment];
@@ -131,16 +130,18 @@
     CGSize size;
     CGSize constrainedSize = CGSizeMake(self.tableView.bounds.size.width, self.tableView.bounds.size.height*2.f);
 
-#ifdef __IPHONE_7_0
-    size = [self.issue.summary boundingRectWithSize:constrainedSize
-                                            options:NSStringDrawingTruncatesLastVisibleLine | NSStringDrawingUsesLineFragmentOrigin
-                                         attributes:@{NSFontAttributeName:self.titleFont}
-                                            context:nil].size;
-#else
-    size = [self.issue.summary sizeWithFont:self.titleFont
-                          constrainedToSize:constrainedSize
-                              lineBreakMode:NSLineBreakByClipping];
-#endif
+    if ([[[UIDevice currentDevice] systemVersion] floatValue] >= 7)
+        size = [self.issue.summary boundingRectWithSize:constrainedSize
+                                                options:NSStringDrawingTruncatesLastVisibleLine | NSStringDrawingUsesLineFragmentOrigin
+                                             attributes:@{NSFontAttributeName:self.titleFont}
+                                                context:nil
+        ].size;
+    else //if iOS version is below 6, use the method deprected in iOS 7
+        size = [self.issue.summary sizeWithFont:self.titleFont
+                              constrainedToSize:constrainedSize
+                                  lineBreakMode:NSLineBreakByClipping
+        ];
+
     return size;
 
 }
@@ -156,6 +157,14 @@
         JMCComment *comment = [self.comments objectAtIndex:indexPath.row];
         return [JMCMessageBubble cellSizeForComment:comment widthConstraint:tableView.bounds.size.width].height+8.f;
     }
+}
+
+static BOOL isPad(void) {
+#ifdef UI_USER_INTERFACE_IDIOM
+    return (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad);
+#else
+    return NO;
+#endif
 }
 
 - (UITableViewCell *)getBubbleCell:(UITableView *)tableView forMessage:(JMCComment *)comment
@@ -217,7 +226,7 @@
 {
 
     //TODO: using a UINavigationController to get the nice navigationBar at the top of the feedback view. better way to do this?
-    self.feedbackController = [[JMCViewController alloc] initWithNibName:@"JMCViewController" bundle:[NSBundle jmc_bundle]];
+    self.feedbackController = [[JMCViewController alloc] initWithNibName:@"JMCViewController" bundle:nil];
     self.feedbackController.replyToIssue = self.issue;
     
     if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {

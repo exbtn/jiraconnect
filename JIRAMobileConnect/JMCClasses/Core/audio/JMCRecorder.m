@@ -38,9 +38,13 @@
 + (BOOL)audioRecordingIsAvailable {
     AVAudioSession *session = [AVAudioSession sharedInstance];
 #ifdef __IPHONE_6_0
-    return session.inputAvailable;
-#else
-    return session.inputIsAvailable;
+    if ([AVAudioSession instancesRespondToSelector:@selector(isInputAvailable)]) {
+        return session.inputAvailable;
+    } else {
+#endif
+        return session.inputIsAvailable;
+#ifdef __IPHONE_6_0
+    }
 #endif
 }
 
@@ -57,13 +61,13 @@
         NSError *err = nil;
         [audioSession setCategory:AVAudioSessionCategoryPlayAndRecord error:&err];
         if (err) {
-            JMCALog(@"audioSession: %@ %ld %@", [err domain], (long)[err code], [[err userInfo] description]);
+            JMCALog(@"audioSession: %@ %d %@", [err domain], [err code], [[err userInfo] description]);
             return nil;
         }
         [audioSession setActive:YES error:&err];
         err = nil;
         if (err) {
-            JMCALog(@"audioSession: %@ %ld %@", [err domain], (long)[err code], [[err userInfo] description]);
+            JMCALog(@"audioSession: %@ %d %@", [err domain], [err code], [[err userInfo] description]);
             return nil;
         }
 
@@ -77,7 +81,7 @@
         AVAudioRecorder *recorder = [[AVAudioRecorder alloc] initWithURL:url settings:recordSetting error:&err];
 
         if (!recorder) {
-            JMCALog(@"recorder: %@ %ld %@", [err domain], (long)[err code], [[err userInfo] description]);
+            JMCALog(@"recorder: %@ %d %@", [err domain], [err code], [[err userInfo] description]);
             return nil;
         }
 
@@ -119,7 +123,7 @@
     NSError *err = nil;
     NSData *audioData = [NSData dataWithContentsOfFile:[url path] options:0 error:&err];
     if (!audioData) {
-        JMCALog(@"audio data: %@ %ld %@", [err domain], (long)[err code], [[err userInfo] description]);
+        JMCALog(@"audio data: %@ %d %@", [err domain], [err code], [[err userInfo] description]);
     }
     return audioData;
 }

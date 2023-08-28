@@ -4,9 +4,6 @@
 // No warranty is expressed or implied.
 
 // Helper methods for adding an alpha layer to an image
-
-@import UIKit;
-
 @interface UIImage (Alpha)
 
 - (BOOL)jmc_hasAlpha;

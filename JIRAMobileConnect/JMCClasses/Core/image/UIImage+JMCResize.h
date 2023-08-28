@@ -4,9 +4,6 @@
 // No warranty is expressed or implied.
 
 // Extends the UIImage class to support resizing/cropping
-
-@import UIKit;
-
 @interface UIImage (JMCResize)
 
 - (UIImage *)jmc_croppedImage:(CGRect)bounds;

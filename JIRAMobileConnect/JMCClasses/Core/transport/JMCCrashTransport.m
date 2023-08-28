@@ -45,7 +45,7 @@
     NSMutableDictionary *customFields = [[JMC sharedInstance] getCustomFields];
     if ([customFields count] > 0) 
     {
-        NSData *customFieldsJSON = [NSJSONSerialization dataWithJSONObject:customFields options:0 error:nil];
+        NSData *customFieldsJSON = [NSJSONSerialization dataWithJSONObject:customFields options:nil error:nil];
         
         JMCAttachmentItem *customFieldsItem = [[JMCAttachmentItem alloc] initWithName:@"customfields"
                                                                                  data:customFieldsJSON

@@ -27,10 +27,6 @@
 #import "UIImage+JMCResize.h"
 #import "UIView+JMCAdditions.h"
 #import "JMCConsoleLogReader.h"
-#import "JMCLocalization.h"
-#import "NSBundle+JMC.h"
-#import "UIImage+JMC.h"
-#import "UIAlertAction+JMC.h"
 
 @interface JMCViewController ()
 
@@ -40,7 +36,7 @@
 
 - (NSMutableArray *)removeImageViewsFromAttachmentsButton;
 
-- (void)addAttachmentItem:(JMCAttachmentItem *)attachment withIcon:(UIImage *)icon;
+- (void)addAttachmentItem:(JMCAttachmentItem *)attachment withIcon:(UIImage *)icon action:(SEL)action;
 - (void)addButtonsToView;
 - (void)addImageAttachmentItem:(UIImage *)origImg;
 - (void)addImageViewsToAttachmentsButton:(NSArray *)imageViews;
@@ -53,6 +49,7 @@
 
 @property(nonatomic, strong) CLLocationManager *locationManager;
 @property(nonatomic, strong) CLLocation *currentLocation;
+@property(nonatomic, strong) UIPopoverController *popover;
 @property(nonatomic, strong) UIButton *screenshotButton;
 @property(nonatomic, strong) UIButton *attachmentsButton;
 
@@ -72,9 +69,8 @@ static NSInteger kJMCTag = 10133;
     // Observe keyboard hide and show notifications to resize the text view appropriately.
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(keyboardWillShow:) name:UIKeyboardWillShowNotification object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(keyboardWillHide:) name:UIKeyboardWillHideNotification object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(keyboardDidHide:) name:UIKeyboardDidHideNotification object:nil];
 
-    self.edgesForExtendedLayout = UIRectEdgeNone;
-    
     if ([self shouldTrackLocation]) {
         CLLocationManager* locMgr = [[CLLocationManager alloc] init];
         self.locationManager = locMgr;
@@ -95,10 +91,10 @@ static NSInteger kJMCTag = 10133;
     self.countdownView.layer.cornerRadius = 7.0;
     
     if (self.replyToIssue) {
-        self.navigationItem.title = JMCLocalizedString(@"Reply", @"Title of the feedback controller");
+        self.navigationItem.title = JMCLocalizedString(@"Reply", "Title of the feedback controller");
     }
     else {
-        self.navigationItem.title = JMCLocalizedString(@"Feedback", @"Title of the feedback controller");
+        self.navigationItem.title = JMCLocalizedString(@"Feedback", "Title of the feedback controller");
     }
 
 
@@ -135,7 +131,7 @@ static NSInteger kJMCTag = 10133;
     if ([self.navigationController.viewControllers objectAtIndex:0] == self) {
         self.navigationItem.leftBarButtonItem =
         [[UIBarButtonItem alloc] initWithTitle:JMCLocalizedString(@"Cancel", @"Cancel feedback")
-                                          style:UIBarButtonItemStylePlain
+                                          style:UIBarButtonItemStyleBordered
                                          target:self
                                          action:@selector(dismiss)];
     }
@@ -159,6 +155,35 @@ static NSInteger kJMCTag = 10133;
     [self dismissKeyboard];
 }
 
+// Override to allow orientations other than the default portrait orientation.
+- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation
+{
+    // Return YES for supported orientations
+    return (UIInterfaceOrientationIsLandscape(interfaceOrientation) ||
+            UIInterfaceOrientationIsPortrait(interfaceOrientation));
+    //    return YES;
+}
+
+- (void)willRotateToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation duration:(NSTimeInterval)duration {
+    // Hide the popover if visible, dealloc otherwise
+    if (self.popover.popoverVisible) {
+        [self.popover dismissPopoverAnimated:NO];
+    }
+    else {
+        self.popover = nil;
+    }
+}
+
+- (void)didRotateFromInterfaceOrientation:(UIInterfaceOrientation)fromInterfaceOrientation {
+    // If popover is set, then present it from button
+    if (self.popover) {
+        [self.popover presentPopoverFromRect:self.screenshotButton.frame
+                                      inView:self.screenshotButton.superview 
+                    permittedArrowDirections:UIPopoverArrowDirectionAny 
+                                    animated:YES];
+    }
+}
+
 #pragma mark - UIKeyboard Notification Methods
 
 /*
@@ -172,7 +197,7 @@ static NSInteger kJMCTag = 10133;
     [UIView setAnimationDuration:[[userInfo objectForKey:UIKeyboardAnimationDurationUserInfoKey] floatValue]];
     [UIView setAnimationCurve:[[userInfo objectForKey:UIKeyboardAnimationCurveUserInfoKey] intValue]];
 
-    if (self.traitCollection.userInterfaceIdiom == UIUserInterfaceIdiomPhone) {
+    if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPhone) {
         CGRect newFrame = self.view.bounds;
         CGRect kbRect = [[userInfo objectForKey:UIKeyboardFrameEndUserInfoKey] CGRectValue];
         // The frame does not take into account any rotation, we have to convert the
@@ -201,10 +226,10 @@ static NSInteger kJMCTag = 10133;
     [UIView setAnimationDuration:[[userInfo objectForKey:UIKeyboardAnimationDurationUserInfoKey] floatValue]];
     [UIView setAnimationCurve:[[userInfo objectForKey:UIKeyboardAnimationCurveUserInfoKey] intValue]];
     
-    if (self.traitCollection.userInterfaceIdiom == UIUserInterfaceIdiomPhone) {
+    if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPhone) {
         if (!_ignoreKeyboardHide) {
             CGRect newFrame = self.view.bounds;
-            if (self.traitCollection.verticalSizeClass == UIUserInterfaceSizeClassRegular) {
+            if (UIInterfaceOrientationIsPortrait(self.interfaceOrientation)) {
                 newFrame.size.height = 416;
             }
             else {
@@ -223,6 +248,17 @@ static NSInteger kJMCTag = 10133;
     }
     
     [UIView commitAnimations];
+}
+
+- (void)keyboardDidHide:(NSNotification*)notification
+{
+    // If keyboard did hide and popover is visible, present it from new position
+    if (self.popover.popoverVisible) {
+        [self.popover presentPopoverFromRect:self.screenshotButton.frame
+                                      inView:self.screenshotButton.superview 
+                    permittedArrowDirections:UIPopoverArrowDirectionAny 
+                                    animated:YES];
+    }
 }
 
 #pragma mark - UITextViewDelegate Methods
@@ -247,28 +283,44 @@ static NSInteger kJMCTag = 10133;
 
 - (IBAction)addScreenshot
 {
-    UIImagePickerController *imagePicker = [[UIImagePickerController alloc] init];
-    imagePicker.sourceType = UIImagePickerControllerSourceTypePhotoLibrary;
-    imagePicker.delegate = self;
-    imagePicker.modalPresentationStyle = UIModalPresentationPopover;
-    
-    if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPhone) {
-        _ignoreKeyboardHide = YES;
+    if ([self.popover isPopoverVisible]) 
+    {
+        [self.popover dismissPopoverAnimated:YES];
+        self.popover = nil;
+    } 
+    else 
+    {
+        UIImagePickerController *imagePicker = [[UIImagePickerController alloc] init];
+        imagePicker.sourceType = UIImagePickerControllerSourceTypePhotoLibrary;
+        imagePicker.delegate = self;
+        if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) 
+        {
+            self.popover = [[UIPopoverController alloc] initWithContentViewController:imagePicker];
+            [self.popover presentPopoverFromRect:self.screenshotButton.frame
+                                          inView:self.screenshotButton.superview 
+                        permittedArrowDirections:UIPopoverArrowDirectionAny 
+                                        animated:YES];
+        }
+        else 
+        {
+            _ignoreKeyboardHide = YES;
+            [self presentViewController:imagePicker animated:YES completion:nil];
+        }
     }
-    [self presentViewController:imagePicker animated:YES completion:nil];
-    
-    UIPopoverPresentationController *popoverPresentationController = [imagePicker popoverPresentationController];
-    popoverPresentationController.permittedArrowDirections = UIPopoverArrowDirectionAny;
-    popoverPresentationController.sourceView = self.screenshotButton.superview;
-    popoverPresentationController.sourceRect = self.screenshotButton.frame;
-    
+       
 }
 
 - (IBAction)addVoice
 {
     JMCRecorder* recorder = [JMCRecorder instance];
     if (!recorder) {
-        [self presentVoiceRecordingNoAudioErrorAlert];
+        UIAlertView *alert =
+        [[UIAlertView alloc] initWithTitle: JMCLocalizedString(@"Voice Recording", @"Alert title when no audio") 
+                                   message: JMCLocalizedString(@"JMCVoiceRecordingNotSupported", @"Alert when no audio") 
+                                  delegate: nil
+                         cancelButtonTitle:@"OK"
+                         otherButtonTitles:nil];
+        [alert show];
         return;
     }
     recorder.recorder.delegate = self;
@@ -286,7 +338,7 @@ static NSInteger kJMCTag = 10133;
         NSMutableArray *sprites = [NSMutableArray arrayWithCapacity:8];
         for (int i = 1; i < 9; i++) {
             NSString *sprintName = [@"icon_record_" stringByAppendingFormat:@"%d", i];
-            UIImage *img = [UIImage jmc_imageNamed:sprintName];
+            UIImage *img = [UIImage imageNamed:sprintName];
             [sprites addObject:img];
         }
         self.voiceButton.imageView.animationImages = sprites;
@@ -294,16 +346,6 @@ static NSInteger kJMCTag = 10133;
         [self.voiceButton.imageView startAnimating];
 
     }
-}
-
-- (void)presentVoiceRecordingNoAudioErrorAlert {
-    NSString *title = JMCLocalizedString(@"Voice Recording", @"Alert title when no audio");
-    NSString *message = JMCLocalizedString(@"JMCVoiceRecordingNotSupported", @"Alert when no audio");
-    UIAlertController *errorAlertController = [UIAlertController alertControllerWithTitle:title
-                                                                                  message:message
-                                                                           preferredStyle:UIAlertControllerStyleAlert];
-    [errorAlertController addAction:[UIAlertAction jmc_okAction]];
-    [self presentViewController:errorAlertController animated:YES completion:nil];
 }
 
 - (void)viewAttachments:(UIButton *)sender {
@@ -370,7 +412,7 @@ static NSInteger kJMCTag = 10133;
     }
     
     // add all custom fields as one attachment item
-    NSData *customFieldsJSON = [NSJSONSerialization dataWithJSONObject:customFields options:0 error:nil];
+    NSData *customFieldsJSON = [NSJSONSerialization dataWithJSONObject:customFields options:nil error:nil];
     
     JMCAttachmentItem *customFieldsItem = [[JMCAttachmentItem alloc] initWithName:@"customfields"
                                                                              data:customFieldsJSON
@@ -397,7 +439,7 @@ static NSInteger kJMCTag = 10133;
     [allAttachments addObject:customFieldsItem];
     
     
-    BOOL sayThankYou = NO;
+    
     if (self.replyToIssue) {
         [self.replyTransport sendReply:self.replyToIssue
                            description:self.descriptionField.text
@@ -406,27 +448,18 @@ static NSInteger kJMCTag = 10133;
         // use the first 80 chars of the description as the issue summary
         NSString *description = self.descriptionField.text;
         u_int length = 80;
-        NSUInteger toIndex = [description length] > length ? length : [description length];
+        u_int toIndex = [description length] > length ? length : [description length];
         NSString *truncationMarker = [description length] > length ? @"..." : @"";
         [self.issueTransport send:[[description substringToIndex:toIndex] stringByAppendingString:truncationMarker]
                       description:self.descriptionField.text
                       attachments:allAttachments];
-        sayThankYou = YES;
     }
     
     if ([self.navigationController.viewControllers count] > 1) {
         [self.navigationController popViewControllerAnimated:YES];
-        if (sayThankYou) {
-            [self.issueTransport sayThankYouFromViewController:self.navigationController];
-        }
     }
     else {
-        UIViewController *presentingViewController = [self presentingViewController];
-        [self dismissViewControllerAnimated:YES completion:^{
-            if (sayThankYou) {
-                [self.issueTransport sayThankYouFromViewController: presentingViewController];
-            }
-        }];
+        [self dismissViewControllerAnimated:YES completion:nil];
     }
     
     self.descriptionField.text = @"";
@@ -449,8 +482,8 @@ static NSInteger kJMCTag = 10133;
                                                              filenameFormat:@"recording-%d.aac"];
     
     
-    attachment.thumbnail = [UIImage jmc_imageNamed:@"audio_attachment"];
-    [self addAttachmentItem:attachment withIcon:attachment.thumbnail];
+    attachment.thumbnail = [UIImage imageNamed:@"audio_attachment"];
+    [self addAttachmentItem:attachment withIcon:attachment.thumbnail action:@selector(voiceAttachmentTapped:)];
     [recorder cleanUp];
 }
 
@@ -459,8 +492,12 @@ static NSInteger kJMCTag = 10133;
 - (void)imagePickerController:(UIImagePickerController *)picker didFinishPickingMediaWithInfo:(NSDictionary *)info
 {
 
-    [self dismissViewControllerAnimated:YES completion:nil];
-    
+    if ([self.popover isPopoverVisible]) {
+        [self.popover dismissPopoverAnimated:YES];
+    } else {
+        [self dismissViewControllerAnimated:YES completion:nil];
+    }
+
     UIImage *origImg = (UIImage *) [info objectForKey:UIImagePickerControllerOriginalImage];
 
     CGSize screenSize = [UIScreen mainScreen].bounds.size;
@@ -553,7 +590,7 @@ static NSInteger kJMCTag = 10133;
 
 
 - (void)configureButtonOverlayView {
-    self.buttonOverlayView.image = [UIImage jmc_imageNamed:@"background_overlay.png"];
+    self.buttonOverlayView.image = [UIImage imageNamed:@"background_overlay.png"];
 }
 
 - (void)layoutButtonOverlayView {
@@ -708,7 +745,7 @@ static NSInteger kJMCTag = 10133;
 - (UIButton *)buttonFor:(NSString *)iconNamed action:(SEL)action
 {
     UIButton *button = [UIButton buttonWithType:UIButtonTypeCustom];
-    [button setImage:[UIImage jmc_imageNamed:iconNamed] forState:UIControlStateNormal];
+    [button setImage:[UIImage imageNamed:iconNamed] forState:UIControlStateNormal];
     [button addTarget:self action:action forControlEvents:UIControlEventTouchUpInside];
     button.frame = CGRectMake(0, 0, 44, 44);
     return button;
@@ -740,7 +777,7 @@ static NSInteger kJMCTag = 10133;
     [_timer invalidate];
 }
 
-- (void)addAttachmentItem:(JMCAttachmentItem *)attachment withIcon:(UIImage *)icon
+- (void)addAttachmentItem:(JMCAttachmentItem *)attachment withIcon:(UIImage *)icon action:(SEL)action
 {
     
     [self.attachments insertObject:attachment atIndex:0]; // attachments must be kept in sycnh with buttons
@@ -758,7 +795,7 @@ static NSInteger kJMCTag = 10133;
     
     
     attachment.thumbnail = [origImg jmc_thumbnailImage:34 transparentBorder:0 cornerRadius:3.0 interpolationQuality:kCGInterpolationDefault];
-    [self addAttachmentItem:attachment withIcon:attachment.thumbnail];
+    [self addAttachmentItem:attachment withIcon:attachment.thumbnail action:@selector(imageAttachmentTapped:)];
 }
 
 - (void)removeAttachmentItemAtIndex:(NSUInteger)attachmentIndex
@@ -769,7 +806,7 @@ static NSInteger kJMCTag = 10133;
 
 #pragma mark - Memory Managment Methods
 
-@synthesize descriptionField, countdownView, progressView, currentLocation, locationManager = _locationManager;
+@synthesize descriptionField, countdownView, progressView, currentLocation, locationManager = _locationManager, popover;
 @synthesize attachmentsViewController, buttonOverlayView;
 @synthesize issueTransport = _issueTransport, replyTransport = _replyTransport, attachments = _attachments, replyToIssue = _replyToIssue;
 @synthesize voiceButton = _voiceButton, screenshotButton = _screenshotButton, attachmentsButton = _attachmentsButton;
@@ -801,6 +838,7 @@ static NSInteger kJMCTag = 10133;
     self.descriptionField = nil;
     self.replyTransport = nil;
     self.issueTransport = nil;
+    self.popover = nil;
 }
 
 @end

@@ -1,15 +1,13 @@
-@import Foundation;
-@import UIKit;
-
-@interface JMCTransportOperation : NSOperation
+@interface JMCTransportOperation : NSOperation  
 {
 @private
     BOOL finished;
     BOOL executing;
+    BOOL looping;
     NSInteger statusCode;
-    NSData *responseData;
+    NSMutableData *responseData;
     NSThread *requestThread;
-    NSURLSessionDataTask *dataTask;
+    NSURLConnection *connection;
     NSURLRequest *request;
     UIBackgroundTaskIdentifier backgroundTask;
 }

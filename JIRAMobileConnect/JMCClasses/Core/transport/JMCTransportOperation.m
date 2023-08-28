@@ -6,6 +6,7 @@
 @interface JMCTransportOperation ()
 
 - (void)cancelItem;
+- (void)connection:(NSURLConnection *)aConnection didFailWithError:(NSError *)error;
 
 @end
 
@@ -38,6 +39,7 @@
 - (void)start {
     if (![self isCancelled]) {    
         [self willChangeValueForKey:@"isExecuting"];
+        looping = YES;
         executing = YES;
         
         [[NSURLCache sharedURLCache] removeAllCachedResponses];
@@ -52,7 +54,7 @@
     };
 }
 
-- (BOOL)isAsynchronous {
+- (BOOL)isConcurrent {
     return YES;
 }
 
@@ -72,12 +74,13 @@
 }
 
 - (void)cancelOnRequestThread {
-    [dataTask cancel];
+    looping = NO;
+    [connection cancel];
     [self cancelItem];
 }
 
 - (void)connect {
-
+#if __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_4_0
     backgroundTask = [[UIApplication sharedApplication] beginBackgroundTaskWithExpirationHandler:^{
         // Synchronize the cleanup call on the main thread in case
         // the task actually finishes at around the same time.
@@ -89,74 +92,80 @@
             }
         });
     }];
+#endif
     
     @autoreleasepool {
         requestThread = [NSThread currentThread];
         
-        __weak __typeof__(self) weakSelf = self;
-        dataTask = [[NSURLSession sharedSession]
-         dataTaskWithRequest:request
-         completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
-             
-             if (weakSelf == nil) {
-                 return;
-             }
-             __typeof__(self) strongSelf = weakSelf;
-             
-             if (error == nil) {
-                 strongSelf->statusCode = [(NSHTTPURLResponse *)response statusCode];
-                 strongSelf->responseData = data;
-                 
-                 NSString *requestId = [strongSelf->request valueForHTTPHeaderField:kJMCHeaderNameRequestId];
-                 NSString *responseString = [[NSString alloc] initWithBytes:[strongSelf->responseData bytes] length:[strongSelf->responseData length] encoding: NSUTF8StringEncoding];
-                 if (strongSelf->statusCode < 300) {
-                     // alert the delegate!
-                     [strongSelf.delegate transportDidFinish:responseString requestId:requestId];
-                     
-                     // remove the request item from the queue
-                     JMCRequestQueue *queue = [JMCRequestQueue sharedInstance];
-                     [queue deleteItem:requestId];
-                     JMCDLog(@"%@ Request succeeded & queued item is deleted. %@ ", strongSelf, requestId);
-                 } else if (strongSelf->statusCode == 401) {
-                     NSLog(@"Issue not created in JIRA because the autocreated user 'jiraconnectuser' does not have the 'Create Issue' permission on your project.\n Server Response: '%@'", responseString);
-                     [strongSelf handleNetworkError:nil];
-                 } else {
-                     JMCDLog(@"%@ Request FAILED & queued item is not deleted. %@ %@",strongSelf, requestId, responseString);
-                     [strongSelf handleNetworkError:nil];
-                 }
-             } else {
-                 [strongSelf handleNetworkError:error];
-             }
-             
-             [strongSelf willChangeValueForKey:@"isFinished"];
-             [strongSelf willChangeValueForKey:@"isExecuting"];
-             strongSelf->finished = YES;
-             strongSelf->executing = NO;
-             [strongSelf didChangeValueForKey:@"isExecuting"];
-             [strongSelf didChangeValueForKey:@"isFinished"];
-             
-             strongSelf->requestThread = nil;
-            
-         }];
-        [dataTask resume];
+        connection = [[NSURLConnection alloc] initWithRequest:request delegate:self];
+        if (connection != nil) {
+            do {
+                [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode beforeDate:[NSDate distantFuture]];
+            } while (looping);
+        }    
+        
+        [self willChangeValueForKey:@"isFinished"];
+        [self willChangeValueForKey:@"isExecuting"];    
+        finished = YES;
+        executing = NO;
+        [self didChangeValueForKey:@"isExecuting"];
+        [self didChangeValueForKey:@"isFinished"];  
+        
+        requestThread = nil;
+        connection = nil;
     }
-
+    
+#if TARGET_OS_IPHONE && __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_4_0
     dispatch_async(dispatch_get_main_queue(), ^{
         if (backgroundTask != UIBackgroundTaskInvalid) {
             [[UIApplication sharedApplication] endBackgroundTask:backgroundTask];
             backgroundTask = UIBackgroundTaskInvalid;
         }
     });
-
+#endif
 }
 
-- (void)handleNetworkError:(NSError *)error {
-    NSString *requestId = [request valueForHTTPHeaderField:kJMCHeaderNameRequestId];
+#pragma mark - NSURLConnection Delegate Methods
+
+- (void)connection:(NSURLConnection *)aConnection didReceiveResponse:(NSURLResponse *)response {
+    statusCode = [(NSHTTPURLResponse *)response statusCode];
     
+    responseData = [[NSMutableData alloc] init];
+    [responseData setLength:0];
+}
+
+- (void)connection:(NSURLConnection *)connection didReceiveData:(NSData *)data {
+    [responseData appendData:data];
+}
+
+- (void)connectionDidFinishLoading:(NSURLConnection *)aConnection {
+    NSString *requestId = [request valueForHTTPHeaderField:kJMCHeaderNameRequestId];
+    NSString *responseString = [[NSString alloc] initWithBytes:[responseData bytes] length:[responseData length] encoding: NSUTF8StringEncoding];    
+    if (statusCode < 300) {
+        // alert the delegate!
+        [self.delegate transportDidFinish:responseString requestId:requestId];
+        
+        // remove the request item from the queue
+        JMCRequestQueue *queue = [JMCRequestQueue sharedInstance];
+        [queue deleteItem:requestId];
+        JMCDLog(@"%@ Request succeeded & queued item is deleted. %@ ", self, requestId);
+    } else if (statusCode == 401) {
+        NSLog(@"Issue not created in JIRA because the autocreated user 'jiraconnectuser' does not have the 'Create Issue' permission on your project.\n Server Response: '%@'", responseString);
+        [self connection:connection didFailWithError:nil];
+    } else {
+        JMCDLog(@"%@ Request FAILED & queued item is not deleted. %@ %@",self, requestId, responseString);
+        [self connection:connection didFailWithError:nil];
+    }
+    looping = NO;
+}
+
+- (void)connection:(NSURLConnection *)aConnection didFailWithError:(NSError *)error {
+    NSString *requestId = [request valueForHTTPHeaderField:kJMCHeaderNameRequestId];
+
     [[JMCRequestQueue sharedInstance] updateItem:requestId sentStatus:JMCSentStatusRetry bumpNumAttemptsBy:1];
     
     if ([self.delegate respondsToSelector:@selector(transportDidFinishWithError:statusCode:requestId:)]) {
-        [self.delegate transportDidFinishWithError:error statusCode:(int)statusCode requestId:requestId];
+        [self.delegate transportDidFinishWithError:error statusCode:statusCode requestId:requestId];
     }
     
 #ifdef JMC_DEBUG
@@ -168,8 +177,11 @@
     if (responseString) {
         msg = [msg stringByAppendingString:responseString];
     }
-    JMCDLog(@"Request failed: %@ URL: %@, response code: %ld", msg, [[request.URL absoluteURL] description], statusCode);
+    NSString *absoluteURL = [[request.URL absoluteURL] description];
+    JMCDLog(@"Request failed: %@ URL: %@, response code: %d", msg, absoluteURL, statusCode);
 #endif
+    
+    looping = NO;
 }
 
 @end

@@ -22,7 +22,7 @@
     return;
     #endif
     
-    aslmsg m = NULL;
+    aslmsg q, m;
     int i;
     const char *key, *val;
     
@@ -30,7 +30,7 @@
     
     const char* lastLoggedMsgId = lastLoggedId ? [lastLoggedId UTF8String] : "0";
     
-    aslmsg q = asl_new(ASL_TYPE_QUERY);
+    q = asl_new(ASL_TYPE_QUERY);
     asl_set_query(q, ASL_KEY_SENDER, [appId UTF8String], ASL_QUERY_OP_EQUAL);
     asl_set_query(q, ASL_KEY_MSG_ID, lastLoggedMsgId, ASL_QUERY_OP_GREATER);
     aslresponse r = asl_search(NULL, q);
@@ -39,7 +39,7 @@
     
     NSOutputStream* outStream = [[NSOutputStream alloc] initToFileAtPath:path append:YES];
     [outStream open];
-    while (NULL != (m = asl_next(r)))
+    while (NULL != (m = aslresponse_next(r)))
     {        
         for (i = 0; (NULL != (key = asl_key(m, i))); i++)
         {
@@ -59,7 +59,7 @@
     
     
     [outStream close];
-    asl_release(r);
+    aslresponse_free(r);
 }
 
 @end

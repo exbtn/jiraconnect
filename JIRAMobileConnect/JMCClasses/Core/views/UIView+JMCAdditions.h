@@ -1,5 +1,5 @@
 
-@import UIKit;
+#import <Foundation/Foundation.h>
 
 
 extern NSUInteger const UIViewAutoresizingFlexibleBottomRight;

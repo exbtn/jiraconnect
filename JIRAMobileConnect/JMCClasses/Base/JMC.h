@@ -16,6 +16,7 @@
 
 #import <Foundation/Foundation.h>
 #import "JMCViewController.h"
+#import "CrashReporter.h"
 #import "JMCAttachmentItem.h"
 #import "JMCMacros.h"
 

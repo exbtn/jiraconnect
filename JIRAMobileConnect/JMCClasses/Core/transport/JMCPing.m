@@ -41,13 +41,13 @@
     NSString *uuid = [[JMC sharedInstance] getUUID];
     NSNumber* lastPingTime = [[NSUserDefaults standardUserDefaults] objectForKey:kJMCLastSuccessfulPingTime];
     lastPingTime = lastPingTime ? lastPingTime : [NSNumber numberWithInt:0];
-    
-    NSDictionary *params = @{
-                             @"project": project ,
-                             @"uuid": uuid ,
-                             @"apikey": [[JMC sharedInstance] getApiKey],
-                             @"sinceMillis": [lastPingTime stringValue]
-                            };
+
+    NSMutableDictionary *params = [NSMutableDictionary dictionaryWithCapacity:3];
+    [params setObject:project forKey:@"project"];
+    [params setObject:uuid forKey:@"uuid"];
+    NSString* key = [[JMC sharedInstance] getApiKey];
+    [params setObject:key forKey:@"apikey"];
+    [params setValue:[lastPingTime stringValue] forKey:@"sinceMillis"];
     NSString * queryString = [JMCTransport encodeParameters:params];
     NSString *resourceUrl = [NSString stringWithFormat:kJMCTransportNotificationsPath, [[JMC sharedInstance] getAPIVersion], queryString];
 
@@ -58,39 +58,8 @@
     NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:url];
     request.timeoutInterval = 60;
     
-    [[[NSURLSession sharedSession]
-     dataTaskWithRequest:request
-     completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
-         
-         if (error == nil) {
-             statusCode = [(NSHTTPURLResponse *)response statusCode];
-             responseData = data;
-             NSString *responseString = [[NSString alloc] initWithBytes:[responseData bytes] length:[responseData length] encoding: NSUTF8StringEncoding];
-             if ([responseString isEqualToString:@"null"] || [responseString isEqualToString:@""])
-             {
-                 JMCALog(@"Invalid, empty response from JIRA: %@", responseString);
-                 return;
-             }
-             
-             if (statusCode < 300)
-             {
-                 NSDictionary *data = [NSJSONSerialization JSONObjectWithData:[responseString dataUsingEncoding:NSUTF8StringEncoding] options:0 error:nil];
-                 [self performSelectorOnMainThread:@selector(didReceiveComments:) withObject:data waitUntilDone:YES];
-             }
-             else
-             {
-                 JMCALog(@"Error request comments and issues: %@", responseString);
-             }
-             // Flush the request Queue on App launch and once the JIRA Ping has returned and potentially rebuilt the database
-             JMCDLog(@"Flushing the request queue");
-             [self performSelectorOnMainThread:@selector(flushQueue) withObject:nil waitUntilDone:YES];
-         } else {
-             NSString *responseString = [[NSString alloc] initWithBytes:[responseData bytes] length:[responseData length] encoding: NSUTF8StringEncoding];
-             JMCALog(@"Ping request failed: '%@'", responseString);
-         }
-         
-         
-     }] resume];
+    connection = [NSURLConnection connectionWithRequest:request delegate:self];
+    [connection start];
 }
 
 - (void)didReceiveComments:(NSDictionary *)comments {
@@ -108,6 +77,45 @@
 
 - (void)flushQueue {
     [[JMC sharedInstance] flushRequestQueue];
+}
+
+- (void)connection:(NSURLConnection *)aConnection didReceiveResponse:(NSURLResponse *)response {
+    statusCode = [(NSHTTPURLResponse *)response statusCode];
+    
+    responseData = [[NSMutableData alloc] init];
+    [responseData setLength:0];
+}
+
+- (void)connection:(NSURLConnection *)connection didReceiveData:(NSData *)data {
+    [responseData appendData:data];
+}
+
+- (void)connectionDidFinishLoading:(NSURLConnection *)aConnection {
+    NSString *responseString = [[NSString alloc] initWithBytes:[responseData bytes] length:[responseData length] encoding: NSUTF8StringEncoding];
+    
+    if ([responseString isEqualToString:@"null"] || [responseString isEqualToString:@""])
+    {
+        JMCALog(@"Invalid, empty response from JIRA: %@", responseString);
+        return;
+    }
+    
+    if (statusCode < 300)
+    {
+        NSDictionary *data = [NSJSONSerialization JSONObjectWithData:[responseString dataUsingEncoding:NSUTF8StringEncoding] options:nil error:nil];
+        [self performSelectorOnMainThread:@selector(didReceiveComments:) withObject:data waitUntilDone:YES];
+    }
+    else
+    {
+        JMCALog(@"Error request comments and issues: %@", responseString);
+    }
+    // Flush the request Queue on App launch and once the JIRA Ping has returned and potentially rebuilt the database
+    JMCDLog(@"Flushing the request queue");
+    [self performSelectorOnMainThread:@selector(flushQueue) withObject:nil waitUntilDone:YES];
+}
+
+- (void)connection:(NSURLConnection *)aConnection didFailWithError:(NSError *)error {
+    NSString *responseString = [[NSString alloc] initWithBytes:[responseData bytes] length:[responseData length] encoding: NSUTF8StringEncoding];
+    JMCALog(@"Ping request failed: '%@'", responseString);
 }
 
 @synthesize baseUrl = _baseUrl;

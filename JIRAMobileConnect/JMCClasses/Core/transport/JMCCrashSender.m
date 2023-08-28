@@ -21,8 +21,6 @@
 #import "JMCTransport.h"
 #import "JMCIssueStore.h"
 #import "JMCCreateIssueDelegate.h"
-#import "JMCLocalization.h"
-#import "UIApplication+JMC.h"
 
 #define kJiraConnectAutoSubmitCrashes @"JiraConnectAutoSubmitCras"
 
@@ -41,55 +39,47 @@
     return self;
 }
 
+
+
 - (void)promptThenMaybeSendCrashReports {
+
     if (![[CrashReporter sharedCrashReporter] hasPendingCrashReport]) {
         return;
     }
 
     if (![[NSUserDefaults standardUserDefaults] boolForKey:kAutomaticallySendCrashReports]) {
-        [self presentCrashFoundAlert];
+        NSString *description = JMCLocalizedString(@"CrashDataFoundDescription",
+        @"Description explaining that crash data has been found and ask the user if the data might be uplaoded to the developers server");
+
+        UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:JMCLocalizedString(@"CrashDataFoundTitle", @"Title showing in the alert box when crash report data has been found")
+                                                            message:[NSString stringWithFormat:description, [[JMC sharedInstance] getAppName]]
+                                                           delegate:self
+                                                  cancelButtonTitle:JMCLocalizedString(@"No", @"No") otherButtonTitles:JMCLocalizedString(@"Yes", @"Yes"), JMCLocalizedString(@"Always", @"Always"), nil];
+        [alertView show];
     } else {
         [self sendCrashReports];
     }
 }
 
-- (void)presentCrashFoundAlert {
-    NSString *title = JMCLocalizedString(@"CrashDataFoundTitle",
-                                         @"Title showing in the alert box when crash report data has been found");
-    NSString *description = JMCLocalizedString(@"CrashDataFoundDescription",
-                                               @"Description explaining that crash data has been found and ask "
-                                               @"the user if the data might be uplaoded to the developers server");
-    UIAlertController *alertController = [UIAlertController
-                                          alertControllerWithTitle:title
-                                          message:[NSString stringWithFormat:description, [[JMC sharedInstance] getAppName]]
-                                          preferredStyle:UIAlertControllerStyleAlert];
-    UIAlertAction *yesAction =
-        [UIAlertAction actionWithTitle:JMCLocalizedString(@"Yes", @"Yes")
-         style:UIAlertActionStyleDefault
-         handler:^(UIAlertAction * _Nonnull action) {
-             [self sendCrashReports];
-         }];
-    UIAlertAction *alwaysAction =
-        [UIAlertAction actionWithTitle:JMCLocalizedString(@"Always", @"Always")
-         style:UIAlertActionStyleDefault
-         handler:^(UIAlertAction * _Nonnull action) {
-             [[NSUserDefaults standardUserDefaults] setBool:YES forKey:kAutomaticallySendCrashReports];
-             [[NSUserDefaults standardUserDefaults] synchronize];
-             [self sendCrashReports];
-         }];
-    UIAlertAction *noAction =
-        [UIAlertAction actionWithTitle:JMCLocalizedString(@"No", @"No")
-         style:UIAlertActionStyleCancel
-         handler:^(UIAlertAction * _Nonnull action) {
-             [[CrashReporter sharedCrashReporter] cleanCrashReports];
-         }];
-    [alertController addAction:yesAction];
-    [alertController addAction:alwaysAction];
-    [alertController addAction:noAction];
-    [[UIApplication jmc_rootViewController] presentViewController:alertController animated:YES completion:nil];
+- (void)alertView:(UIAlertView *)alertView didDismissWithButtonIndex:(NSInteger)buttonIndex {
+    switch (buttonIndex) {
+        case 0:
+            [[CrashReporter sharedCrashReporter] cleanCrashReports];
+            break;
+        case 1:
+            [self sendCrashReports];
+            break;
+        case 2:
+            [[NSUserDefaults standardUserDefaults] setBool:YES forKey:kAutomaticallySendCrashReports];
+            [[NSUserDefaults standardUserDefaults] synchronize];
+            [self sendCrashReports];
+            break;
+    }
 }
 
+
 - (void)sendCrashReports {
+
     if ([CrashReporter sharedCrashReporter] == nil) {
         return;
     }
@@ -106,7 +96,7 @@
     NSArray *reports = [[CrashReporter sharedCrashReporter] crashReports];
     // queue all the reports
     for (NSString *report in reports) {
-        NSUInteger toIndex = [report length] > 500 ? 500 : [report length];
+        u_int toIndex = [report length] > 500 ? 500 : [report length];
         [_transport send:@"Crash report"
              description:[[report substringToIndex:toIndex] stringByAppendingString:@"...\n(truncated)"]
              crashReport:report];
@@ -115,6 +105,8 @@
     [[CrashReporter sharedCrashReporter] cleanCrashReports];
     // flush the queue to ensure they get sent
     [[JMC sharedInstance] flushRequestQueue];
+
 }
+
 
 @end

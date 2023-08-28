@@ -20,9 +20,6 @@
 #import "UILabel+JMCVerticalAlign.h"
 #import "JMCMacros.h"
 #import "JMCRequestQueue.h"
-#import "JMCLocalization.h"
-#import "NSBundle+JMC.h"
-#import "UIAlertAction+JMC.h"
 
 static NSString *cellId = @"CommentCell";
 
@@ -71,7 +68,7 @@ static NSString *cellId = @"CommentCell";
         [self dismissViewControllerAnimated:YES completion:nil];
     } else {
         CGRect statusBarFrame = [UIApplication sharedApplication].statusBarFrame;
-        CGSize screenSize = [[UIScreen mainScreen] bounds].size;
+        CGSize screenSize = [[UIScreen mainScreen] applicationFrame].size;
         
         [UIView animateWithDuration:0.4 animations:^{
             CGRect frame = self.navigationController.view.frame;
@@ -110,7 +107,7 @@ static NSString *cellId = @"CommentCell";
     }
     else {
         self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:JMCLocalizedString(@"Close", @"Close navigation item")
-                                                                                  style:UIBarButtonItemStylePlain
+                                                                                  style:UIBarButtonItemStyleBordered
                                                                                  target:self
                                                                                  action:@selector(cancel:)];
     }
@@ -140,7 +137,7 @@ static NSString *cellId = @"CommentCell";
     JMCIssuePreviewCell *cell = (JMCIssuePreviewCell *) [tableView dequeueReusableCellWithIdentifier:cellId];
 
     if (cell == NULL) {
-        NSArray *topLevelObjects = [[NSBundle jmc_bundle] loadNibNamed:@"JMCIssuePreviewCell" owner:self options:nil];
+        NSArray *topLevelObjects = [[NSBundle mainBundle] loadNibNamed:@"JMCIssuePreviewCell" owner:self options:nil];
         cell = [topLevelObjects objectAtIndex:0];
     }
 
@@ -163,6 +160,7 @@ static NSString *cellId = @"CommentCell";
     [self.tableView reloadData];
 }
 
+
 #pragma mark - Table view delegate
 
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
@@ -178,14 +176,20 @@ static NSString *cellId = @"CommentCell";
         NSString* message = (sentStatus == JMCSentStatusPermError) ?
         JMCLocalizedString(@"JMCRequestPermErrorMessage", @"Alert when create issue request not successful after N attempts."):
         JMCLocalizedString(@"JMCRequestPendingMessage", @"Alert when create issue request not yet successful");
-        [self presentErrorAlertWithTitle:title message:message];
+        UIAlertView *alert =
+            [[UIAlertView alloc] initWithTitle: title
+                                       message: message
+                                      delegate: nil
+                             cancelButtonTitle:@"OK"
+                             otherButtonTitles:nil];
+            [alert show];
         
         [tableView deselectRowAtIndexPath:indexPath animated:YES]; 
 
     } else {
     
         issue.comments = [self.issueStore loadCommentsFor:issue];
-        JMCIssueViewController *detailViewController = [[JMCIssueViewController alloc] initWithNibName:@"JMCIssueViewController" bundle:[NSBundle jmc_bundle]];
+        JMCIssueViewController *detailViewController = [[JMCIssueViewController alloc] initWithNibName:@"JMCIssueViewController" bundle:nil];
         detailViewController.issue = issue;
         detailViewController.title = [issue.summary stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
         
@@ -195,17 +199,6 @@ static NSString *cellId = @"CommentCell";
         [tableView reloadData]; // redraw the table.
     }
 }
-
-#pragma mark - Alerts
-
-- (void)presentErrorAlertWithTitle:(NSString *)title message:(NSString *)message {
-    UIAlertController *alertController = [UIAlertController alertControllerWithTitle:title
-                                                                             message:message
-                                                                      preferredStyle:UIAlertControllerStyleAlert];
-    [alertController addAction:[UIAlertAction jmc_okAction]];
-    [self presentViewController:alertController animated:YES completion:nil];
-}
-
 #pragma mark end
 
 - (void)dealloc {

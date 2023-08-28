@@ -6,8 +6,7 @@
 //  Copyright (c) 2012 Nick Pellow. All rights reserved.
 //
 
-@import CoreGraphics;
-
+#import <Foundation/Foundation.h>
 #import "JMCShape.h"
 
 @interface JMCVector : NSObject <JMCShapeDrawing> {
@@ -39,6 +38,7 @@
 @property (nonatomic, strong) NSMutableArray *points;
 
 - (void)addPoint:(CGPoint)point;
+- (void)visitPoints;
 
 - (void)extendPoint;
 - (void)lengthOfArrowHead;

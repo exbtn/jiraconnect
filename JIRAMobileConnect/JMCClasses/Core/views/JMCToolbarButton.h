@@ -5,7 +5,7 @@
 //
 
 
-@import UIKit;
+#import <Foundation/Foundation.h>
 
 
 @interface JMCToolbarButton : UIButton {

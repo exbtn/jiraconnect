@@ -55,6 +55,8 @@
     
     [[JMCRequestQueue sharedInstance] addItem:queueItem];
     [[JMC sharedInstance] flushRequestQueue];
+
+    [self sayThankYou];
 }
 
 

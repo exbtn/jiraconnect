@@ -19,7 +19,7 @@
 @interface JMCPing : NSObject 
 {
     NSInteger statusCode;
-    NSData *responseData;
+    NSMutableData *responseData;
     NSURL *_baseUrl;
     NSURLConnection *connection;
 }

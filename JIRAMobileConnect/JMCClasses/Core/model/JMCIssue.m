@@ -50,7 +50,7 @@
 
 +(JMCIssue *)issueWith:(NSString*)issueJSON requestId:(NSString*)uuid
 {
-    NSDictionary *responseDict = [NSJSONSerialization JSONObjectWithData:[issueJSON dataUsingEncoding:NSUTF8StringEncoding] options:0 error:nil];
+    NSDictionary *responseDict = [NSJSONSerialization JSONObjectWithData:[issueJSON dataUsingEncoding:NSUTF8StringEncoding] options:nil error:nil];
     JMCIssue *issue = [[JMCIssue alloc] initWithDictionary:responseDict];
     issue.requestId = uuid;
     return issue;

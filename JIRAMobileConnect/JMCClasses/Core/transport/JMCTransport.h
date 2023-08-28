@@ -14,8 +14,7 @@
    limitations under the License.
 **/
 
-@import UIKit;
-
+#import <Foundation/Foundation.h>
 #import "JMCIssue.h"
 #import "JMCQueueItem.h"
 
@@ -44,7 +43,7 @@
 - (NSURL *) makeUrlFor:(NSString *)issueKey;
 @end
 
-@interface JMCTransport : NSObject <JMCQueueItemDelegate> 
+@interface JMCTransport : NSObject <UIAlertViewDelegate, JMCQueueItemDelegate> 
 {
     @private
     id <JMCTransportDelegate> _delegate;
@@ -58,7 +57,7 @@
                    attachments:(NSArray *)attachments
                         params:(NSMutableDictionary *)params
                       issueKey:(NSString *)issueKey;
--(void)sayThankYouFromViewController:(UIViewController *)viewController;
+- (void)sayThankYou;
 
 - (NSMutableDictionary*)buildCommonParams:(NSString*)subject type:(NSString*)typeName;
 

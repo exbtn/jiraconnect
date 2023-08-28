@@ -14,6 +14,9 @@
    limitations under the License.
 **/
 
+#define JMCLocalizedString(key, comment) \
+    [[NSBundle mainBundle] localizedStringForKey:(key) value:@"" table:@"JMCLocalizable"]
+
 # define JMCALog(format, ...) NSLog((@"%d %s " format), __LINE__, __PRETTY_FUNCTION__, ##__VA_ARGS__);
 
 # ifdef JMC_DEBUG
@@ -21,3 +24,4 @@
 # else
 #   define JMCDLog(...)
 # endif
+
