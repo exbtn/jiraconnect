@@ -76,7 +76,6 @@
 		627AB38C2A9CD3F000F4F6E4 /* libJIRAMobileConnect.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libJIRAMobileConnect.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		627AB38F2A9CD3F000F4F6E4 /* JIRAMobileConnect.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = JIRAMobileConnect.h; sourceTree = "<group>"; };
 		627AB3902A9CD3F000F4F6E4 /* JIRAMobileConnect.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = JIRAMobileConnect.m; sourceTree = "<group>"; };
-		627AB3982A9CD41F00F4F6E4 /* JIRAConnect-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "JIRAConnect-Prefix.pch"; sourceTree = "<group>"; };
 		627AB5182A9CD56500F4F6E4 /* JMCDatabase+JMCDatabaseAdditions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "JMCDatabase+JMCDatabaseAdditions.h"; sourceTree = "<group>"; };
 		627AB5192A9CD56500F4F6E4 /* JMCDatabase.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = JMCDatabase.m; sourceTree = "<group>"; };
 		627AB51A2A9CD56500F4F6E4 /* JMCResultSet.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = JMCResultSet.m; sourceTree = "<group>"; };
@@ -226,10 +225,6 @@
 		627AB5B82A9CD56500F4F6E4 /* JMCAttachmentItem.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JMCAttachmentItem.h; sourceTree = "<group>"; };
 		627AB5B92A9CD56500F4F6E4 /* JMCViewController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = JMCViewController.xib; sourceTree = "<group>"; };
 		627AB5BA2A9CD56500F4F6E4 /* JMC.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = JMC.m; sourceTree = "<group>"; };
-		627AB5EC2A9CD5E400F4F6E4 /* create-issue.sh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.sh; path = "create-issue.sh"; sourceTree = "<group>"; };
-		627AB5EE2A9CD5E400F4F6E4 /* pony-2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "pony-2.png"; sourceTree = "<group>"; };
-		627AB5EF2A9CD5E400F4F6E4 /* issue.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = issue.json; sourceTree = "<group>"; };
-		627AB5F02A9CD5E400F4F6E4 /* jiraconnect-recording.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "jiraconnect-recording.caf"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -263,9 +258,7 @@
 		627AB38E2A9CD3F000F4F6E4 /* JIRAMobileConnect */ = {
 			isa = PBXGroup;
 			children = (
-				627AB5EB2A9CD5E400F4F6E4 /* dev */,
 				627AB5152A9CD56500F4F6E4 /* JMCClasses */,
-				627AB3982A9CD41F00F4F6E4 /* JIRAConnect-Prefix.pch */,
 				627AB38F2A9CD3F000F4F6E4 /* JIRAMobileConnect.h */,
 				627AB3902A9CD3F000F4F6E4 /* JIRAMobileConnect.m */,
 			);
@@ -545,25 +538,6 @@
 				627AB5BA2A9CD56500F4F6E4 /* JMC.m */,
 			);
 			path = Base;
-			sourceTree = "<group>";
-		};
-		627AB5EB2A9CD5E400F4F6E4 /* dev */ = {
-			isa = PBXGroup;
-			children = (
-				627AB5EC2A9CD5E400F4F6E4 /* create-issue.sh */,
-				627AB5ED2A9CD5E400F4F6E4 /* assets */,
-			);
-			path = dev;
-			sourceTree = SOURCE_ROOT;
-		};
-		627AB5ED2A9CD5E400F4F6E4 /* assets */ = {
-			isa = PBXGroup;
-			children = (
-				627AB5EE2A9CD5E400F4F6E4 /* pony-2.png */,
-				627AB5EF2A9CD5E400F4F6E4 /* issue.json */,
-				627AB5F02A9CD5E400F4F6E4 /* jiraconnect-recording.caf */,
-			);
-			path = assets;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
