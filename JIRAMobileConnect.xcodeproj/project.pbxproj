@@ -784,7 +784,7 @@
 					"$(PROJECT_DIR)/JIRAMobileConnect/JMCClasses/Libraries",
 				);
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = "JIRAMobileConnect/JIRAConnect-Prefix.pch";
+				GCC_PREFIX_HEADER = "JIRAConnect-Prefix.pch";
 				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -802,7 +802,7 @@
 					"$(PROJECT_DIR)/JIRAMobileConnect/JMCClasses/Libraries",
 				);
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = "JIRAMobileConnect/JIRAConnect-Prefix.pch";
+				GCC_PREFIX_HEADER = "JIRAConnect-Prefix.pch";
 				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;

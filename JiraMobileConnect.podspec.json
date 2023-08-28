@@ -1,15 +1,39 @@
 {
-  "name": "JIRAMobileConnect",
-  "summary": "Framework",
-  "homepage": "https://github.com/exbtn/jiraconnect",
-  "license": "MIT"
+  "name": "JiraMobileConnect",
+  "version": "1.0.0",
+  "license": {
+    "type": "Apache 2.0",
+    "file": "LICENSE"
+  },
+  "summary": "Jira Mobile Connect library",
+  "homepage": "https://bitbucket.org/atlassian/jiraconnect-ios",
+  "authors": {
+    "Atlassian Software": "info@atlassian.com"
+  },
   "source": {
     "git": "https://github.com/exbtn/jiraconnect.git"
   },
   "platforms": {
-    "ios": "9.0"
+    "ios": "5.0"
   },
+  "source_files": [
+    "JIRAConnect/JMCClasses/Base/*.{h,m}",
+    "JIRAConnect/JMCClasses/Core/**/*.{h,m}"
+  ],
   "requires_arc": true,
-  "frameworks": ["Foundation", "UIKit"],
-  "source_files": ["JIRAMobileConnect", "JIRAMobileConnect/JMCClasses"]
+  "prefix_header_file": "JIRAConnect/JIRAConnect-Prefix.pch",
+  "vendored_frameworks": "**/CrashReporter.framework",
+  "compiler_flags": "-fno-objc-arc",
+  "frameworks": [
+    "Foundation",
+    "UIKit",
+    "CoreGraphics",
+    "CFNetwork",
+    "SystemConfiguration",
+    "MobileCoreServices",
+    "CoreGraphics",
+    "AVFoundation",
+    "CoreLocation",
+    "libsqlite3"
+  ]
 }
